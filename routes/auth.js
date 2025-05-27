@@ -1,17 +1,31 @@
 import express from 'express';
-import { register, login, logout, getProfile, updateProfile } from '../controllers/authController.js';
+import { body } from 'express-validator';
+import { register, login, getMe } from '../controllers/auth.js';
 import { protect } from '../middleware/auth.js';
-import { upload } from '../config/cloudinary.js';
 
 const router = express.Router();
 
-// Public routes
-router.post('/register', register);
-router.post('/login', login);
-router.get('/logout', logout);
+// Register user
+router.post('/register',
+  [
+    body('username').trim().isLength({ min: 3 }),
+    body('email').isEmail(),
+    body('password').isLength({ min: 6 }),
+    body('displayName').trim().notEmpty()
+  ],
+  register
+);
 
-// Protected routes
-router.get('/profile', protect, getProfile);
-router.put('/profile', protect, upload.single('avatar'), updateProfile);
+// Login user
+router.post('/login',
+  [
+    body('email').isEmail(),
+    body('password').exists()
+  ],
+  login
+);
+
+// Get current user
+router.get('/me', protect, getMe);
 
 export default router; 

@@ -1,67 +1,73 @@
 import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-        trim: true
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  isPublic: {
+    type: Boolean,
+    default: true
+  },
+  accessCode: {
+    type: String,
+    required: function() {
+      return !this.isPublic;
+    }
+  },
+  status: {
+    type: String,
+    enum: ['inactive', 'live'],
+    default: 'inactive'
+  },
+  participants: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     },
-    creator: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+    role: {
+      type: String,
+      enum: ['creator', 'participant'],
+      default: 'participant'
     },
-    isPrivate: {
-        type: Boolean,
-        default: false
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  messages: [{
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
-    password: {
-        type: String,
-        required: function() {
-            return this.isPrivate;
-        }
+    content: {
+      type: String,
+      required: true
     },
-    status: {
-        type: String,
-        enum: ['inactive', 'live'],
-        default: 'inactive'
-    },
-    participants: [{
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
-        status: {
-            type: String,
-            enum: ['active', 'muted', 'lobby'],
-            default: 'active'
-        },
-        joinedAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    messages: [{
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
-        content: {
-            type: String,
-            required: true
-        },
-        timestamp: {
-            type: Date,
-            default: Date.now
-        }
-    }]
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
-    timestamps: true
+  timestamps: true
 });
-
-// Index for faster queries
-roomSchema.index({ status: 1, isPrivate: 1 });
-roomSchema.index({ 'participants.user': 1 });
 
 const Room = mongoose.model('Room', roomSchema);
 
