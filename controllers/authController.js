@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { cloudinary } from '../config/cloudinary.js';
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -141,9 +142,10 @@ export const getProfile = async (req, res) => {
 // Update User Profile
 export const updateProfile = async (req, res) => {
     try {
-        const { displayName, bio, avatar } = req.body;
-        const user = await User.findById(req.user.id);
+        console.log('Request body:', req.body);
+        console.log('Request file:', req.file);
 
+        const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -151,10 +153,33 @@ export const updateProfile = async (req, res) => {
             });
         }
 
-        // Update fields
-        if (displayName) user.displayName = displayName;
-        if (bio) user.bio = bio;
-        if (avatar) user.avatar = avatar;
+        // Update fields if they exist in the request
+        if (req.body.displayName) {
+            user.displayName = req.body.displayName;
+        }
+        if (req.body.bio) {
+            user.bio = req.body.bio;
+        }
+
+        // Handle avatar upload
+        if (req.file) {
+            try {
+                // Delete old avatar from Cloudinary if it exists
+                if (user.avatar && user.avatar.includes('cloudinary')) {
+                    const publicId = user.avatar.split('/').slice(-1)[0].split('.')[0];
+                    await cloudinary.uploader.destroy(publicId);
+                }
+                // Update user's avatar with the new Cloudinary URL
+                user.avatar = req.file.path;
+                console.log('New avatar URL:', req.file.path);
+            } catch (error) {
+                console.error('Error handling avatar upload:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error uploading avatar'
+                });
+            }
+        }
 
         await user.save();
 
@@ -163,9 +188,10 @@ export const updateProfile = async (req, res) => {
             data: user
         });
     } catch (error) {
+        console.error('Profile update error:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: error.message || 'Error updating profile'
         });
     }
 }; 
